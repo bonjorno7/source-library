@@ -1,6 +1,6 @@
-# Python Template
+# Source Library
 
-The goal is an environment that makes sure all contributed code is up to standard.
+Python library for importing and exporting Source Engine models.
 
 ## Development
 
