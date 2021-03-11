@@ -44,7 +44,7 @@ class SMDFrameModel(object):
         '''Initialize SMD frame data model.
 
         Args:
-            time: Number of frames passed at this point in the file.
+            time: Number of frames passed at this point in the SMD.
             bones: Bones that changed this frame.
         '''
         self.time = time
@@ -94,15 +94,15 @@ class SMDTriangleModel(object):
         self.vertices = vertices if vertices else []
 
 
-class SMDFileModel(object):
-    '''SMD file data model.'''
+class SMDModel(object):
+    '''SMD data model.'''
 
     def __init__(self, version=1, nodes=None, frames=None, triangles=None):
         # type: (int, List[SMDNodeModel], List[SMDFrameModel], List[SMDTriangleModel]) -> None
-        '''Initialize SMD file data model.
+        '''Initialize SMD data model.
 
         Args:
-            version: Version of this SMD file.
+            version: Version of this SMD.
             nodes: SMD nodes.
             frames: SMD frames.
             triangles: SMD triangles.
