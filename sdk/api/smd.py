@@ -7,94 +7,127 @@ from ..models.smd import (
     SMDFrameModel,
     SMDVertexModel,
     SMDTriangleModel,
-    SMDFileModel,
+    SMDModel,
 )
 
 
-def _convert_vector(vec):
-    # type: (Iterable[float]) -> None
-    '''Convert vector to string.
+class SMDSerializer(object):
+    '''SMD serializer.'''
 
-    Args:
-        vec: Iterable of numbers.
-    '''
-    return ' '.join(str(round(n, 6)) for n in vec)
+    def __init__(self, smd):
+        # type: (SMDModel) -> None
+        '''Serialize SMD.'''
+        self._smd = deepcopy(smd)
+        self._lines = []
 
+        self._serialize_version(self._smd.version)
+        self._serialize_nodes(self._smd.nodes)
+        self._serialize_frames(self._smd.frames)
+        self._serialize_triangles(self._smd.triangles)
 
-def _convert_bones(bones):
-    # type: (List[Tuple[float, float]]) -> None
-    '''Convert list of bone tuples to string.
+        self._lines.append('')
+        self._string = '\n'.join(self._lines)
 
-    Args:
-        bones: Pairs of index and weight.
-    '''
-    return '  '.join('{} {}'.format(i, round(w, 6)) for (i, w) in bones)
+    def __str__(self):
+        # type: () -> str
+        '''Get SMD string.'''
+        return self._string
 
+    def _serialize_version(self, version):
+        # type: (int) -> None
+        self._lines.append('version {}'.format(version))
 
-def smd_to_file(path, smd):
-    # type: (str, SMDFileModel) -> None
-    '''Export an SMD file.
+    def _serialize_nodes(self, nodes):
+        # type: (List[SMDNodeModel]) -> None
+        self._lines.append('nodes')
 
-    Args:
-        path: Path to the file.
-        smd: SMD file data model.
-    '''
-    smd = deepcopy(smd)
+        if not nodes:
+            nodes.append(SMDNodeModel())
 
-    with open(path, 'w') as file:
-        file.write('version {}\n'.format(smd.version))
+        for node in nodes:
+            self._serialize_node(node)
 
-        file.write('nodes\n')
+        self._lines.append('end')
 
-        if len(smd.nodes) == 0:
-            smd.nodes.append(SMDNodeModel())
+    def _serialize_node(self, node):
+        # type: (SMDNodeModel) -> None
+        self._lines.append('{}    "{}"    {}'.format(
+            node.index,
+            node.name,
+            node.parent,
+        ))
 
-        for node in smd.nodes:
-            file.write('{}    "{}"    {}\n'.format(
-                node.index,
-                node.name,
-                node.parent,
-            ))
+    def _serialize_frames(self, frames):
+        # type: (List[SMDFrameModel]) -> None
+        self._lines.append('skeleton')
 
-        file.write('end\n')
+        if not frames:
+            frames.append(SMDFrameModel())
 
-        file.write('skeleton\n')
+        for frame in frames:
+            self._serialize_frame(frame)
 
-        if len(smd.frames) == 0:
-            smd.frames.append(SMDFrameModel())
+        self._lines.append('end')
 
-        for frame in smd.frames:
-            file.write('time {}\n'.format(frame.time))
+    def _serialize_frame(self, frame):
+        # type: (SMDFrameModel) -> None
+        self._lines.append('time {}'.format(frame.time))
 
-            if len(frame.bones) == 0:
-                frame.bones.append(SMDBoneModel())
+        if not frame.bones:
+            frame.bones.append(SMDBoneModel())
 
-            for bone in frame.bones:
-                file.write('{}    {}    {}\n'.format(
-                    bone.index,
-                    _convert_vector(bone.pos),
-                    _convert_vector(bone.rot),
-                ))
+        for bone in frame.bones:
+            self._serialize_bone(bone)
 
-        file.write('end\n')
+    def _serialize_bone(self, bone):
+        # type: (SMDBoneModel) -> None
+        self._lines.append('{}    {}    {}'.format(
+            bone.index,
+            self._convert_vector(bone.pos),
+            self._convert_vector(bone.rot),
+        ))
 
-        if len(smd.triangles) > 0:
-            file.write('triangles\n')
+    def _serialize_triangles(self, triangles):
+        # type: (List[SMDTriangleModel]) -> None
+        if not triangles:
+            return
 
-            for triangle in smd.triangles:
-                file.write('{}\n'.format(triangle.material))
+        self._lines.append('triangles')
 
-                for vertex in triangle.vertices:
-                    if len(vertex.bones) == 0:
-                        vertex.bones.append((0, 1))
+        for triangle in triangles:
+            self._serialize_triangle(triangle)
 
-                    file.write('{}    {}  {}  {}    {}    {}\n'.format(
-                        vertex.parent,
-                        _convert_vector(vertex.pos),
-                        _convert_vector(vertex.nor),
-                        _convert_vector(vertex.uv),
-                        len(vertex.bones),
-                        _convert_bones(vertex.bones),
-                    ))
+        self._lines.append('end')
 
-            file.write('end\n')
+    def _serialize_triangle(self, triangle):
+        # type: (SMDTriangleModel) -> None
+        self._lines.append(triangle.material)
+
+        for vertex in triangle.vertices:
+            self._serialize_vertex(vertex)
+
+    def _serialize_vertex(self, vertex):
+        # type: (SMDVertexModel) -> None
+        if not vertex.weights:
+            vertex.weights.append((0, 1))
+
+        self._lines.append('{}    {}  {}  {}    {}    {}'.format(
+            vertex.parent,
+            self._convert_vector(vertex.pos),
+            self._convert_vector(vertex.nor),
+            self._convert_vector(vertex.uv),
+            len(vertex.weights),
+            self._convert_weights(vertex.weights),
+        ))
+
+    def _convert_vector(self, vec):
+        # type: (Iterable[float]) -> str
+        return ' '.join(str(round(n, 6)) for n in vec)
+
+    def _convert_weights(self, weights):
+        # type: (List[Tuple[int, float]]) -> str
+        return '  '.join(self._convert_weight(i, w) for i, w in weights)
+
+    def _convert_weight(self, index, weight):
+        # type: (int, float) -> str
+        return '{} {}'.format(index, round(weight, 6))
