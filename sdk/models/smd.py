@@ -60,7 +60,7 @@ class SMDVertexModel(object):
             pos=(0, 0, 0),
             nor=(0, 0, 0),
             uv=(0, 0),
-            bones=None,
+            weights=None,
     ):
         # type: (int, Tuple[float, float, float], Tuple[float, float, float], Tuple[float, float], List[Tuple[int, float]]) -> None
         '''Initialize SMD triangle data model.
@@ -70,13 +70,13 @@ class SMDVertexModel(object):
             pos: 3D position.
             nor: 3D normal.
             uv: 2D texture coordinates.
-            bones: Index and weight for each bone this vertex is skinned to.
+            weights: Index and weight for each bone this vertex is skinned to.
         '''
         self.parent = parent
         self.pos = pos
         self.nor = nor
         self.uv = uv
-        self.bones = bones if bones else []
+        self.weights = weights if weights else []
 
 
 class SMDTriangleModel(object):
