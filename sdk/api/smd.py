@@ -1,112 +1,136 @@
 '''SMD file API.'''
-from typing import Iterable, List, Tuple
-from copy import deepcopy
+from typing import Iterable, List, Union
 from ..models.smd import (
     SMDNodeModel,
     SMDBoneModel,
     SMDFrameModel,
+    SMDWeightModel,
     SMDVertexModel,
     SMDTriangleModel,
     SMDModel,
 )
 
 
-def encode_smd(smd):
-    # type: (SMDModel) -> str
-    smd = deepcopy(smd)
+class SMDEncoder(object):
 
-    return 'version {}\n{}{}{}'.format(
-        smd.version,
-        _encode_nodes(smd.nodes),
-        _encode_frames(smd.frames),
-        _encode_triangles(smd.triangles),
-    )
+    def __init__(self, add_default_values=True):
+        # type: (bool) -> None
+        self.add_default_values = add_default_values
 
+    def encode_smd(self, smd):
+        # type: (SMDModel) -> str
+        return ''.join((
+            self.encode_version(smd.version),
+            self.encode_nodes(smd.nodes),
+            self.encode_frames(smd.frames),
+            self.encode_triangles(smd.triangles),
+        ))
 
-def _encode_nodes(nodes):
-    # type: (List[SMDNodeModel]) -> str
-    if not nodes:
-        nodes.append(SMDNodeModel())
+    def encode_version(self, version):
+        # type: (int) -> str
+        version = self.encode_number(version)
+        return 'version {}\n'.format(version)
 
-    return 'nodes\n{}end\n'.format(''.join(
-        _encode_node(node) for node in nodes))
+    def encode_nodes(self, nodes):
+        # type: (List[SMDNodeModel]) -> str
+        if self.add_default_values and not nodes:
+            nodes = [SMDNodeModel()]
 
+        nodes = ''.join(map(self.encode_node, nodes))
+        return 'nodes\n{}end\n'.format(nodes)
 
-def _encode_node(node):
-    # type: (SMDNodeModel) -> str
-    return '{}    "{}"    {}\n'.format(
-        node.index,
-        node.name,
-        node.parent,
-    )
+    def encode_node(self, node):
+        # type: (SMDNodeModel) -> str
+        return '{}    "{}"    {}\n'.format(
+            self.encode_number(node.index),
+            node.name,
+            node.parent,
+        )
 
+    def encode_frames(self, frames):
+        # type: (List[SMDFrameModel]) -> str
+        if self.add_default_values and not frames:
+            frames = [SMDFrameModel()]
 
-def _encode_frames(frames):
-    # type: (List[SMDFrameModel]) -> str
-    if not frames:
-        frames = [SMDFrameModel()]
+        frames = ''.join(map(self.encode_frame, frames))
+        return 'skeleton\n{}end\n'.format(frames)
 
-    return 'skeleton\n{}end\n'.format(''.join(
-        _encode_frame(frame) for frame in frames))
+    def encode_frame(self, frame):
+        # type: (SMDFrameModel) -> str
+        return ''.join((
+            self.encode_time(frame.time),
+            self.encode_bones(frame.bones),
+        ))
 
+    def encode_time(self, time):
+        # type: (int) -> str
+        time = self.encode_number(time)
+        return 'time {}\n'.format(time)
 
-def _encode_frame(frame):
-    # type: (SMDFrameModel) -> str
-    if not frame.bones:
-        frame.bones.append(SMDBoneModel())
+    def encode_bones(self, bones):
+        # type: (List[SMDBoneModel]) -> str
+        if self.add_default_values and not bones:
+            bones = [SMDBoneModel()]
 
-    return 'time {}\n{}'.format(
-        frame.time,
-        ''.join(_encode_bone(bone) for bone in frame.bones),
-    )
+        return ''.join(map(self.encode_bone, bones))
 
+    def encode_bone(self, bone):
+        # type: (SMDBoneModel) -> str
+        return '{}    {}    {}\n'.format(
+            self.encode_number(bone.index),
+            self.encode_vector(bone.pos),
+            self.encode_vector(bone.rot),
+        )
 
-def _encode_bone(bone):
-    # type: (SMDBoneModel) -> str
-    return '{}    {}    {}\n'.format(
-        bone.index,
-        _encode_vector(bone.pos),
-        _encode_vector(bone.rot),
-    )
+    def encode_triangles(self, triangles):
+        # type: (List[SMDTriangleModel]) -> str
+        if not triangles:
+            return ''
 
+        triangles = ''.join(map(self.encode_triangle, triangles))
+        return 'triangles\n{}end\n'.format(triangles)
 
-def _encode_triangles(triangles):
-    # type: (List[SMDTriangleModel]) -> str
-    if not triangles:
-        return ''
+    def encode_triangle(self, triangle):
+        # type: (SMDTriangleModel) -> str
+        return ''.join((
+            self.encode_material(triangle.material),
+            self.encode_vertices(triangle.vertices),
+        ))
 
-    return 'triangles\n{}end\n'.format(''.join(
-        _encode_triangle(triangle) for triangle in triangles))
+    def encode_material(self, material):
+        # type: (str) -> str
+        return '{}\n'.format(material)
 
+    def encode_vertices(self, vertices):
+        # type: (List[SMDVertexModel]) -> str
+        return ''.join(map(self.encode_vertex, vertices))
 
-def _encode_triangle(triangle):
-    # type: (SMDTriangleModel) -> str
-    return '{}\n{}'.format(
-        triangle.material,
-        ''.join(_encode_vertex(vertex) for vertex in triangle.vertices),
-    )
+    def encode_vertex(self, vertex):
+        # type: (SMDVertexModel) -> str
+        return '{}    {}  {}  {}    {}    {}\n'.format(
+            self.encode_number(vertex.parent),
+            self.encode_vector(vertex.pos),
+            self.encode_vector(vertex.nor),
+            self.encode_vector(vertex.uv),
+            self.encode_number(len(vertex.weights)),
+            self.encode_weights(vertex.weights),
+        )
 
+    def encode_weights(self, weights):
+        # type: (List[SMDWeightModel]) -> str
+        if self.add_default_values and not weights:
+            weights = [SMDWeightModel()]
 
-def _encode_vertex(vertex):
-    # type: (SMDVertexModel) -> str
-    if not vertex.weights:
-        vertex.weights.append((0, 1))
+        return '  '.join(map(self.encode_weight, weights))
 
-    return '{}    {}  {}  {}    {}    {}\n'.format(
-        vertex.parent,
-        _encode_vector(vertex.pos),
-        _encode_vector(vertex.nor),
-        _encode_vector(vertex.uv),
-        len(vertex.weights),
-        _encode_weights(vertex.weights),
-    )
+    def encode_weight(self, weight):
+        # type: (SMDWeightModel) -> str
+        return self.encode_vector((weight.index, weight.value))
 
+    def encode_vector(self, vector):
+        # type: (Iterable[Union[int, float]]) -> str
+        return ' '.join(map(self.encode_number, vector))
 
-def _encode_vector(vec):
-    # type: (Iterable[float]) -> str
-    return ' '.join(str(round(n, 6)) for n in vec)
-
-
-def _encode_weights(weights):
-    # type: (List[Tuple[int, float]]) -> str
-    return '  '.join('{} {}'.format(i, round(w, 6)) for i, w in weights)
+    def encode_number(self, value):
+        # type: (Union[int, float]) -> str
+        return str(round(value, 6))
