@@ -51,6 +51,21 @@ class SMDFrameModel(object):
         self.bones = bones if bones else []
 
 
+class SMDWeightModel(object):
+    '''SMD weight data model.'''
+
+    def __init__(self, index=0, value=1):
+        # type: (int, float) -> None
+        '''Initialize SMD weight data model.
+
+        Args:
+            index: Bone index.
+            value: Skinning weight.
+        '''
+        self.index = index
+        self.value = value
+
+
 class SMDVertexModel(object):
     '''SMD vertex data model.'''
 
@@ -62,15 +77,15 @@ class SMDVertexModel(object):
             uv=(0, 0),
             weights=None,
     ):
-        # type: (int, Tuple[float, float, float], Tuple[float, float, float], Tuple[float, float], List[Tuple[int, float]]) -> None
-        '''Initialize SMD triangle data model.
+        # type: (int, Tuple[float, float, float], Tuple[float, float, float], Tuple[float, float], List[SMDWeightModel]) -> None
+        '''Initialize SMD vertex data model.
 
         Args:
             parent: Parent bone index.
             pos: 3D position.
             nor: 3D normal.
             uv: 2D texture coordinates.
-            weights: Index and weight for each bone this vertex is skinned to.
+            weights: Weight for each bone this vertex is skinned to.
         '''
         self.parent = parent
         self.pos = pos
