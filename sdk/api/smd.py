@@ -1,5 +1,5 @@
 '''SMD file API.'''
-from typing import Iterable, List, Union
+from typing import List, Union
 from ..models.smd import (
     SMDNodeModel,
     SMDBoneModel,
@@ -128,8 +128,8 @@ class SMDEncoder(object):
         return self.encode_vector((weight.index, weight.value))
 
     def encode_vector(self, vector):
-        # type: (Iterable[Union[int, float]]) -> str
         return ' '.join(map(self.encode_number, vector))
+        # type: (List[Union[int, float]]) -> str
 
     def encode_number(self, value):
         # type: (Union[int, float]) -> str
