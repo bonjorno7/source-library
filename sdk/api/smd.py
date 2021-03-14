@@ -15,7 +15,7 @@ class SMDEncoder(object):
 
     def __init__(self, add_default_values=True):
         # type: (bool) -> None
-        self.add_default_values = add_default_values
+        self._add_default_values = add_default_values
 
     def encode_smd(self, smd):
         # type: (SMDModel) -> str
@@ -33,7 +33,7 @@ class SMDEncoder(object):
 
     def _encode_nodes(self, nodes):
         # type: (List[SMDNodeModel]) -> str
-        if self.add_default_values and not nodes:
+        if self._add_default_values and not nodes:
             nodes = [SMDNodeModel()]
 
         nodes = ''.join(map(self._encode_node, nodes))
@@ -49,7 +49,7 @@ class SMDEncoder(object):
 
     def _encode_frames(self, frames):
         # type: (List[SMDFrameModel]) -> str
-        if self.add_default_values and not frames:
+        if self._add_default_values and not frames:
             frames = [SMDFrameModel()]
 
         frames = ''.join(map(self._encode_frame, frames))
@@ -69,7 +69,7 @@ class SMDEncoder(object):
 
     def _encode_bones(self, bones):
         # type: (List[SMDBoneModel]) -> str
-        if self.add_default_values and not bones:
+        if self._add_default_values and not bones:
             bones = [SMDBoneModel()]
 
         return ''.join(map(self._encode_bone, bones))
@@ -118,7 +118,7 @@ class SMDEncoder(object):
 
     def _encode_weights(self, weights):
         # type: (List[SMDWeightModel]) -> str
-        if self.add_default_values and not weights:
+        if self._add_default_values and not weights:
             weights = [SMDWeightModel()]
 
         return '  '.join(map(self._encode_weight, weights))
