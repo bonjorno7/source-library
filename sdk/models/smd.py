@@ -22,18 +22,18 @@ class SMDNodeModel(object):
 class SMDBoneModel(object):
     '''SMD bone data model.'''
 
-    def __init__(self, index=0, pos=(0, 0, 0), rot=(0, 0, 0)):
+    def __init__(self, index=0, position=(0, 0, 0), rotation=(0, 0, 0)):
         # type: (int, Tuple[float, float, float], Tuple[float, float, float]) -> None
         '''Initialize SMD bone data model.
 
         Args:
             index: Index of this bone in the rig.
-            pos: Position relative to parent bone.
-            rot: Local Tait-Bryan angles in radians.
+            position: Position relative to parent bone.
+            rotation: Local Tait-Bryan angles in radians.
         '''
         self.index = index
-        self.pos = pos
-        self.rot = rot
+        self.position = position
+        self.rotation = rotation
 
 
 class SMDFrameModel(object):
@@ -72,8 +72,8 @@ class SMDVertexModel(object):
     def __init__(
             self,
             parent=0,
-            pos=(0, 0, 0),
-            nor=(0, 0, 0),
+            position=(0, 0, 0),
+            normal=(0, 0, 0),
             uv=(0, 0),
             weights=None,
     ):
@@ -82,14 +82,14 @@ class SMDVertexModel(object):
 
         Args:
             parent: Parent bone index.
-            pos: 3D position.
-            nor: 3D normal.
+            position: 3D position.
+            normal: 3D normal.
             uv: 2D texture coordinates.
             weights: Weight for each bone this vertex is skinned to.
         '''
         self.parent = parent
-        self.pos = pos
-        self.nor = nor
+        self.position = position
+        self.normal = normal
         self.uv = uv
         self.weights = weights if weights else []
 

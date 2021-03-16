@@ -79,8 +79,8 @@ class SMDEncoder(object):
         # type: (SMDBoneModel) -> str
         return '{}    {}    {}\n'.format(
             self._encode_number(bone.index),
-            self._encode_vector(bone.pos),
-            self._encode_vector(bone.rot),
+            self._encode_vector(bone.position),
+            self._encode_vector(bone.rotation),
         )
 
     def _encode_triangles(self, triangles):
@@ -110,8 +110,8 @@ class SMDEncoder(object):
         # type: (SMDVertexModel) -> str
         return '{}    {}  {}  {}    {}    {}\n'.format(
             self._encode_number(vertex.parent),
-            self._encode_vector(vertex.pos),
-            self._encode_vector(vertex.nor),
+            self._encode_vector(vertex.position),
+            self._encode_vector(vertex.normal),
             self._encode_vector(vertex.uv),
             self._encode_number(len(vertex.weights)),
             self._encode_weights(vertex.weights),
@@ -247,8 +247,8 @@ class SMDDecoder(object):
         # type: (SMDCommand) -> SMDBoneModel
         return SMDBoneModel(
             index=self._decode_number(command[0]),
-            pos=self._decode_vector(command[1:4]),
-            rot=self._decode_vector(command[4:7]),
+            position=self._decode_vector(command[1:4]),
+            rotation=self._decode_vector(command[4:7]),
         )
 
     def _decode_triangles(self, iterator):
@@ -283,8 +283,8 @@ class SMDDecoder(object):
         # type: (SMDCommand) -> SMDVertexModel
         return SMDVertexModel(
             parent=self._decode_number(command[0]),
-            pos=self._decode_vector(command[1:4]),
-            nor=self._decode_vector(command[4:7]),
+            position=self._decode_vector(command[1:4]),
+            normal=self._decode_vector(command[4:7]),
             uv=self._decode_vector(command[7:9]),
             weights=self._decode_weights(command[10:]),
         )
