@@ -126,7 +126,10 @@ class SMDEncoder(object):
 
     def _encode_weight(self, weight):
         # type: (SMDWeightModel) -> str
-        return self._encode_vector((weight.index, weight.value))
+        return '{} {}'.format(
+            self._encode_number(weight.index),
+            self._encode_number(weight.value),
+        )
 
     def _encode_vector(self, vector):
         # type: (List[Union[int, float]]) -> str
@@ -137,6 +140,32 @@ class SMDEncoder(object):
         return str(round(value, 6))
 
 
+SMDCommand = List[str]
+
+
+class SMDIterator(object):
+
+    def __init__(self, string) -> None:
+        # type: (str) -> None
+        lines = string.splitlines()
+        # TODO: Remove comments and empty lines
+        self._commands = list(csv.reader(lines, delimiter=' '))
+
+    def __len__(self):
+        # type () -> int
+        return len(self._commands)
+
+    def __next__(self):
+        # type () -> SMDCommand
+        return self._commands.pop(0)
+
+    def peek(self, sentinel):
+        # type (str) -> SMDCommand
+        if self._commands:
+            if self._commands[0][0] != sentinel:
+                return self._commands[0]
+
+
 class SMDDecoder(object):
 
     def __init__(self):
@@ -144,114 +173,138 @@ class SMDDecoder(object):
 
     def decode_smd(self, string):
         # type: (str) -> SMDModel
-        lines = string.splitlines()
-        # TODO: Remove comments and empty lines
-        commands = csv.reader(lines, delimiter=' ')
-
+        iterator = SMDIterator(string)
         smd = SMDModel()
-        command_type = 'pending'
-        vertex_index = 0
 
-        for command in commands:
-            if command_type == 'pending':
-                if command[0] == 'version':
-                    smd.version = self._decode_version(command)
+        while iterator:
+            command = next(iterator)
 
-                elif command[0] == 'nodes':
-                    command_type = 'nodes'
+            if command[0] == 'version':
+                smd.version = self._decode_version(command)
 
-                elif command[0] == 'skeleton':
-                    command_type = 'frames'
+            elif command[0] == 'nodes':
+                smd.nodes = self._decode_nodes(iterator)
 
-                elif command[0] == 'triangles':
-                    command_type = 'material'
+            elif command[0] == 'skeleton':
+                smd.frames = self._decode_frames(iterator)
 
-            elif command_type == 'nodes':
-                if command[0] == 'end':
-                    command_type = 'pending'
+            elif command[0] == 'triangles':
+                smd.triangles = self._decode_triangles(iterator)
 
-                else:
-                    smd.nodes.append(self._decode_node(command))
-
-            elif command_type == 'frames':
-                if command[0] == 'end':
-                    command_type = 'pending'
-
-                elif command[0] == 'time':
-                    smd.frames.append(self._decode_frame(command))
-
-                else:
-                    smd.frames[-1].bones.append(self._decode_bone(command))
-
-            elif command_type == 'material':
-                smd.triangles.append(self._decode_triangle(command))
-
-                command_type = 'vertices'
-                vertex_index = 0
-
-            elif command_type == 'vertices':
-                if vertex_index > 2:
-                    command_type = 'material'
-                    vertex_index = 0
-
-                else:
-                    smd.triangles[-1].vertices.append(
-                        self._decode_vertex(command))
-
-                    command_type = 'vertices'
-                    vertex_index += 1
+        return smd
 
     def _decode_version(self, command):
-        # type: (List[str]) -> int
-        _, version = command
-        return self._decode_number(version)
+        # type: (SMDCommand) -> int
+        return self._decode_number(command[1])
+
+    def _decode_nodes(self, iterator):
+        # type: (SMDIterator) -> List[SMDNodeModel]
+        nodes = []
+
+        while iterator.peek(sentinel='end'):
+            nodes.append(self._decode_node(next(iterator)))
+
+        return nodes
 
     def _decode_node(self, command):
-        # type: (List[str]) -> SMDNodeModel
+        # type: (SMDCommand) -> SMDNodeModel
         return SMDNodeModel(
             index=self._decode_number(command[0]),
             name=command[1],
             parent=self._decode_number(command[2]),
         )
 
-    def _decode_frame(self, command):
-        # type: (List[str]) -> SMDFrameModel
-        _, time = command
-        return SMDFrameModel(time=self._decode_number(time))
+    def _decode_frames(self, iterator):
+        # type: (SMDIterator) -> List[SMDFrameModel]
+        frames = []
+
+        while iterator.peek(sentinel='end'):
+            frames.append(self._decode_frame(iterator))
+
+        return frames
+
+    def _decode_frame(self, iterator):
+        # type: (SMDIterator) -> SMDFrameModel
+        return SMDFrameModel(
+            time=self._decode_time(next(iterator)),
+            bones=self._decode_bones(iterator),
+        )
+
+    def _decode_time(self, command):
+        # type: (SMDCommand) -> int
+        return self._decode_number(command[1])
+
+    def _decode_bones(self, iterator):
+        # type: (SMDIterator) -> List[SMDBoneModel]
+        bones = []
+
+        while iterator.peek(sentinel='time'):
+            bones.append(self._decode_bone(next(iterator)))
+
+        return bones
 
     def _decode_bone(self, command):
-        # type: (List[str]) -> SMDBoneModel
+        # type: (SMDCommand) -> SMDBoneModel
         return SMDBoneModel(
             index=self._decode_number(command[0]),
             pos=self._decode_vector(command[1:4]),
             rot=self._decode_vector(command[4:7]),
         )
 
-    def _decode_triangle(self, command):
-        # type: (List[str]) -> SMDTriangleModel
-        return SMDTriangleModel(material=command[0])
+    def _decode_triangles(self, iterator):
+        # type: (SMDIterator) -> List[SMDFrameModel]
+        triangles = []
+
+        while iterator.peek(sentinel='end'):
+            triangles.append(self._decode_triangle(iterator))
+
+        return triangles
+
+    def _decode_triangle(self, iterator):
+        # type: (SMDIterator) -> SMDTriangleModel
+        return SMDTriangleModel(
+            material=self._decode_material(next(iterator)),
+            vertices=self._decode_vertices(iterator),
+        )
+
+    def _decode_material(self, command):
+        # type: (SMDCommand) -> str
+        return command[0]
+
+    def _decode_vertices(self, iterator):
+        vertices = []
+
+        for _ in range(3):
+            vertices.append(self._decode_vertex(next(iterator)))
+
+        return vertices
 
     def _decode_vertex(self, command):
-        # type: (List[str]) -> SMDVertexModel
+        # type: (SMDCommand) -> SMDVertexModel
         return SMDVertexModel(
             parent=self._decode_number(command[0]),
             pos=self._decode_vector(command[1:4]),
             nor=self._decode_vector(command[4:7]),
-            weights=self._decode_weights(command[8:]),
+            uv=self._decode_vector(command[7:9]),
+            weights=self._decode_weights(command[10:]),
         )
 
     def _decode_weights(self, command):
-        # type: (List[str]) -> List[SMDWeightModel]
-        pairs = zip(*[iter(command)] * 2)
-        return list(map(self._decode_weight, pairs))
+        # type: (SMDCommand) -> List[SMDWeightModel]
+        return list(map(
+            self._decode_weight,
+            zip(*[iter(command)] * 2),
+        ))
 
     def _decode_weight(self, command):
-        # type: (List[str]) -> SMDWeightModel
-        index, value = self._decode_vector(command)
-        return SMDWeightModel(index=index, value=value)
+        # type: (SMDCommand) -> SMDWeightModel
+        return SMDWeightModel(
+            index=self._decode_number(command[0]),
+            value=self._decode_number(command[1]),
+        )
 
     def _decode_vector(self, command):
-        # type: (List[str]) -> List[Union[int, float]]
+        # type: (SMDCommand) -> List[Union[int, float]]
         return list(map(self._decode_number, command))
 
     def _decode_number(self, token):
