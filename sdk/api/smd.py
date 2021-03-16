@@ -1,5 +1,5 @@
 '''SMD file API.'''
-from typing import List, Union
+from typing import List
 import csv
 from ..models.smd import (
     SMDNodeModel,
@@ -29,7 +29,7 @@ class SMDEncoder(object):
 
     def _encode_version(self, version):
         # type: (int) -> str
-        version = self._encode_number(version)
+        version = self._encode_int(version)
         return 'version {}\n'.format(version)
 
     def _encode_nodes(self, nodes):
@@ -43,9 +43,9 @@ class SMDEncoder(object):
     def _encode_node(self, node):
         # type: (SMDNodeModel) -> str
         return '{}    "{}"    {}\n'.format(
-            self._encode_number(node.index),
+            self._encode_int(node.index),
             node.name,
-            node.parent,
+            self._encode_int(node.parent),
         )
 
     def _encode_frames(self, frames):
@@ -65,7 +65,7 @@ class SMDEncoder(object):
 
     def _encode_time(self, time):
         # type: (int) -> str
-        time = self._encode_number(time)
+        time = self._encode_int(time)
         return 'time {}\n'.format(time)
 
     def _encode_bones(self, bones):
@@ -78,7 +78,7 @@ class SMDEncoder(object):
     def _encode_bone(self, bone):
         # type: (SMDBoneModel) -> str
         return '{}    {}    {}\n'.format(
-            self._encode_number(bone.index),
+            self._encode_int(bone.index),
             self._encode_vector(bone.position),
             self._encode_vector(bone.rotation),
         )
@@ -109,11 +109,11 @@ class SMDEncoder(object):
     def _encode_vertex(self, vertex):
         # type: (SMDVertexModel) -> str
         return '{}    {}  {}  {}    {}    {}\n'.format(
-            self._encode_number(vertex.parent),
+            self._encode_int(vertex.parent),
             self._encode_vector(vertex.position),
             self._encode_vector(vertex.normal),
             self._encode_vector(vertex.uv),
-            self._encode_number(len(vertex.weights)),
+            self._encode_int(len(vertex.weights)),
             self._encode_weights(vertex.weights),
         )
 
@@ -127,17 +127,21 @@ class SMDEncoder(object):
     def _encode_weight(self, weight):
         # type: (SMDWeightModel) -> str
         return '{} {}'.format(
-            self._encode_number(weight.index),
-            self._encode_number(weight.value),
+            self._encode_int(weight.index),
+            self._encode_float(weight.value),
         )
 
     def _encode_vector(self, vector):
-        # type: (List[Union[int, float]]) -> str
-        return ' '.join(map(self._encode_number, vector))
+        # type: (List[float]) -> str
+        return ' '.join(map(self._encode_float, vector))
 
-    def _encode_number(self, value):
-        # type: (Union[int, float]) -> str
+    def _encode_float(self, value):
+        # type: (float) -> str
         return str(round(value, 6))
+
+    def _encode_int(self, value):
+        # type: (int) -> str
+        return str(value)
 
 
 SMDCommand = List[str]
@@ -195,7 +199,7 @@ class SMDDecoder(object):
 
     def _decode_version(self, command):
         # type: (SMDCommand) -> int
-        return self._decode_number(command[1])
+        return self._decode_int(command[1])
 
     def _decode_nodes(self, iterator):
         # type: (SMDIterator) -> List[SMDNodeModel]
@@ -209,9 +213,9 @@ class SMDDecoder(object):
     def _decode_node(self, command):
         # type: (SMDCommand) -> SMDNodeModel
         return SMDNodeModel(
-            index=self._decode_number(command[0]),
+            index=self._decode_int(command[0]),
             name=command[1],
-            parent=self._decode_number(command[2]),
+            parent=self._decode_int(command[2]),
         )
 
     def _decode_frames(self, iterator):
@@ -232,7 +236,7 @@ class SMDDecoder(object):
 
     def _decode_time(self, command):
         # type: (SMDCommand) -> int
-        return self._decode_number(command[1])
+        return self._decode_int(command[1])
 
     def _decode_bones(self, iterator):
         # type: (SMDIterator) -> List[SMDBoneModel]
@@ -246,7 +250,7 @@ class SMDDecoder(object):
     def _decode_bone(self, command):
         # type: (SMDCommand) -> SMDBoneModel
         return SMDBoneModel(
-            index=self._decode_number(command[0]),
+            index=self._decode_int(command[0]),
             position=self._decode_vector(command[1:4]),
             rotation=self._decode_vector(command[4:7]),
         )
@@ -282,7 +286,7 @@ class SMDDecoder(object):
     def _decode_vertex(self, command):
         # type: (SMDCommand) -> SMDVertexModel
         return SMDVertexModel(
-            parent=self._decode_number(command[0]),
+            parent=self._decode_int(command[0]),
             position=self._decode_vector(command[1:4]),
             normal=self._decode_vector(command[4:7]),
             uv=self._decode_vector(command[7:9]),
@@ -299,17 +303,18 @@ class SMDDecoder(object):
     def _decode_weight(self, command):
         # type: (SMDCommand) -> SMDWeightModel
         return SMDWeightModel(
-            index=self._decode_number(command[0]),
-            value=self._decode_number(command[1]),
+            index=self._decode_int(command[0]),
+            value=self._decode_float(command[1]),
         )
 
     def _decode_vector(self, command):
-        # type: (SMDCommand) -> List[Union[int, float]]
-        return list(map(self._decode_number, command))
+        # type: (SMDCommand) -> List[float]
+        return list(map(self._decode_float, command))
 
-    def _decode_number(self, token):
-        # type: (str) -> Union[int, float]
-        try:
-            return int(token)
-        except ValueError:
-            return float(token)
+    def _decode_float(self, token):
+        # type: (str) -> float
+        return float(token)
+
+    def _decode_int(self, token):
+        # type: (str) -> int
+        return int(token)
