@@ -13,13 +13,28 @@ from ..models.smd import (
 
 
 class SMDEncoder(object):
+    '''SMD encoder.'''
 
     def __init__(self, add_default_values=True):
         # type: (bool) -> None
+        '''Initialize SMD encoder.
+
+        Args:
+            add_default_values: Add default node, frame,
+                bone, weight, when there are none.
+        '''
         self._add_default_values = add_default_values
 
     def encode_smd(self, smd):
         # type: (SMDModel) -> str
+        '''Encode SMD.
+
+        Args:
+            smd: SMD data model.
+
+        Returns:
+            SMD contents.
+        '''
         return ''.join((
             self._encode_version(smd.version),
             self._encode_nodes(smd.nodes),
@@ -148,35 +163,57 @@ SMDCommand = List[str]
 
 
 class SMDIterator(object):
+    '''SMD iterator.'''
 
     def __init__(self, string) -> None:
         # type: (str) -> None
+        '''Initialize SMD iterator.
+
+        Args:
+            string: SMD contents.
+        '''
         lines = string.splitlines()
         # TODO: Remove comments and empty lines
         self._commands = list(csv.reader(lines, delimiter=' '))
 
     def __len__(self):
         # type () -> int
+        '''The amount of remaining SMD commands.'''
         return len(self._commands)
 
     def __next__(self):
         # type () -> SMDCommand
+        '''The next SMD command.'''
         return self._commands.pop(0)
 
-    def peek(self, sentinel):
+    def peek(self, sentinel=None):
         # type (str) -> SMDCommand
+        '''Peek the next SMD command if sentinel is not found there.
+
+        Args:
+            sentinel: Token to check for.
+
+        Returns:
+            The next SMD command or None.
+        '''
         if self._commands:
-            if self._commands[0][0] != sentinel:
+            if sentinel not in self._commands[0]:
                 return self._commands[0]
 
 
 class SMDDecoder(object):
-
-    def __init__(self):
-        pass
+    '''SMD decoder.'''
 
     def decode_smd(self, string):
         # type: (str) -> SMDModel
+        '''Decode SMD.
+
+        Args:
+            string: SMD contents.
+
+        returns:
+            SMD data model.
+        '''
         iterator = SMDIterator(string)
         smd = SMDModel()
 
