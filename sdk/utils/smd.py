@@ -2,7 +2,7 @@
 from typing import List
 from csv import reader
 
-SMDCommand = List[str]
+SMDLine = List[str]
 
 
 class SMDIterator(object):
@@ -17,28 +17,28 @@ class SMDIterator(object):
         '''
         lines = string.splitlines()
         # TODO: Remove comments and empty lines
-        self._commands = list(reader(lines, delimiter=' '))
+        self._lines = list(reader(lines, delimiter=' '))
 
     def __len__(self):
         # type () -> int
-        '''The amount of remaining SMD commands.'''
-        return len(self._commands)
+        '''The amount of remaining SMD lines.'''
+        return len(self._lines)
 
     def __next__(self):
-        # type () -> SMDCommand
-        '''The next SMD command.'''
-        return self._commands.pop(0)
+        # type () -> SMDLine
+        '''The next SMD line.'''
+        return self._lines.pop(0)
 
     def peek(self, sentinel=None):
-        # type (str) -> SMDCommand
-        '''Peek the next SMD command if sentinel is not found there.
+        # type (str) -> SMDLine
+        '''Peek the next SMD line if sentinel is not found there.
 
         Args:
             sentinel: Token to check for.
 
         Returns:
-            The next SMD command or None.
+            The next SMD line or None.
         '''
-        if self._commands:
-            if sentinel not in self._commands[0]:
-                return self._commands[0]
+        if self._lines:
+            if sentinel not in self._lines[0]:
+                return self._lines[0]

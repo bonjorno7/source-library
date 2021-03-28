@@ -1,6 +1,6 @@
 '''SMD file API.'''
 from typing import List
-from ..utils.smd import SMDCommand, SMDIterator
+from ..utils.smd import SMDLine, SMDIterator
 from ..models.smd import (
     SMDNodeModel,
     SMDBoneModel,
@@ -176,25 +176,25 @@ class SMDDecoder(object):
         smd = SMDModel()
 
         while iterator:
-            command = next(iterator)
+            line = next(iterator)
 
-            if command[0] == 'version':
-                smd.version = self._decode_version(command)
+            if line[0] == 'version':
+                smd.version = self._decode_version(line)
 
-            elif command[0] == 'nodes':
+            elif line[0] == 'nodes':
                 smd.nodes = self._decode_nodes(iterator)
 
-            elif command[0] == 'skeleton':
+            elif line[0] == 'skeleton':
                 smd.frames = self._decode_frames(iterator)
 
-            elif command[0] == 'triangles':
+            elif line[0] == 'triangles':
                 smd.triangles = self._decode_triangles(iterator)
 
         return smd
 
-    def _decode_version(self, command):
-        # type: (SMDCommand) -> int
-        return self._decode_int(command[1])
+    def _decode_version(self, line):
+        # type: (SMDLine) -> int
+        return self._decode_int(line[1])
 
     def _decode_nodes(self, iterator):
         # type: (SMDIterator) -> List[SMDNodeModel]
@@ -205,12 +205,12 @@ class SMDDecoder(object):
 
         return nodes
 
-    def _decode_node(self, command):
-        # type: (SMDCommand) -> SMDNodeModel
+    def _decode_node(self, line):
+        # type: (SMDLine) -> SMDNodeModel
         return SMDNodeModel(
-            index=self._decode_int(command[0]),
-            name=command[1],
-            parent=self._decode_int(command[2]),
+            index=self._decode_int(line[0]),
+            name=line[1],
+            parent=self._decode_int(line[2]),
         )
 
     def _decode_frames(self, iterator):
@@ -229,9 +229,9 @@ class SMDDecoder(object):
             bones=self._decode_bones(iterator),
         )
 
-    def _decode_time(self, command):
-        # type: (SMDCommand) -> int
-        return self._decode_int(command[1])
+    def _decode_time(self, line):
+        # type: (SMDLine) -> int
+        return self._decode_int(line[1])
 
     def _decode_bones(self, iterator):
         # type: (SMDIterator) -> List[SMDBoneModel]
@@ -242,12 +242,12 @@ class SMDDecoder(object):
 
         return bones
 
-    def _decode_bone(self, command):
-        # type: (SMDCommand) -> SMDBoneModel
+    def _decode_bone(self, line):
+        # type: (SMDLine) -> SMDBoneModel
         return SMDBoneModel(
-            index=self._decode_int(command[0]),
-            position=self._decode_vector(command[1:4]),
-            rotation=self._decode_vector(command[4:7]),
+            index=self._decode_int(line[0]),
+            position=self._decode_vector(line[1:4]),
+            rotation=self._decode_vector(line[4:7]),
         )
 
     def _decode_triangles(self, iterator):
@@ -266,9 +266,9 @@ class SMDDecoder(object):
             vertices=self._decode_vertices(iterator),
         )
 
-    def _decode_material(self, command):
-        # type: (SMDCommand) -> str
-        return command[0]
+    def _decode_material(self, line):
+        # type: (SMDLine) -> str
+        return line[0]
 
     def _decode_vertices(self, iterator):
         vertices = []
@@ -278,33 +278,33 @@ class SMDDecoder(object):
 
         return vertices
 
-    def _decode_vertex(self, command):
-        # type: (SMDCommand) -> SMDVertexModel
+    def _decode_vertex(self, line):
+        # type: (SMDLine) -> SMDVertexModel
         return SMDVertexModel(
-            parent=self._decode_int(command[0]),
-            position=self._decode_vector(command[1:4]),
-            normal=self._decode_vector(command[4:7]),
-            uv=self._decode_vector(command[7:9]),
-            weights=self._decode_weights(command[10:]),
+            parent=self._decode_int(line[0]),
+            position=self._decode_vector(line[1:4]),
+            normal=self._decode_vector(line[4:7]),
+            uv=self._decode_vector(line[7:9]),
+            weights=self._decode_weights(line[10:]),
         )
 
-    def _decode_weights(self, command):
-        # type: (SMDCommand) -> List[SMDWeightModel]
+    def _decode_weights(self, line):
+        # type: (SMDLine) -> List[SMDWeightModel]
         return list(map(
             self._decode_weight,
-            zip(*[iter(command)] * 2),
+            zip(*[iter(line)] * 2),
         ))
 
-    def _decode_weight(self, command):
-        # type: (SMDCommand) -> SMDWeightModel
+    def _decode_weight(self, line):
+        # type: (SMDLine) -> SMDWeightModel
         return SMDWeightModel(
-            index=self._decode_int(command[0]),
-            value=self._decode_float(command[1]),
+            index=self._decode_int(line[0]),
+            value=self._decode_float(line[1]),
         )
 
-    def _decode_vector(self, command):
-        # type: (SMDCommand) -> List[float]
-        return list(map(self._decode_float, command))
+    def _decode_vector(self, line):
+        # type: (SMDLine) -> List[float]
+        return list(map(self._decode_float, line))
 
     def _decode_float(self, token):
         # type: (str) -> float
